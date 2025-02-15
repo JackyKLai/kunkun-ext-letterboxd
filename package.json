@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.kunkun.sh",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JackyKLai/kunkun-ext-letterboxd"
+  },
+  "name": "kunkun-ext-letterboxd",
+  "version": "0.0.4",
+  "type": "module",
+  "kunkun": {
+    "name": "Letterboxd",
+    "shortDescription": "Letterboxd Integration for Kunkun",
+    "longDescription": "Search for movies on Letterboxd, add it to your watchlist, and more.",
+    "identifier": "letterboxd",
+    "permissions": [
+      "fetch:all",
+      {
+        "permission": "open:url",
+        "allow": [
+          {
+            "url": "https://letterboxd.com/**"
+          }
+        ]
+      }
+    ],
+    "demoImages": [],
+    "icon": {
+      "type": "iconify",
+      "value": "simple-icons:letterboxd"
+    },
+    "customUiCmds": [],
+    "templateUiCmds": [
+      {
+        "name": "Letterboxd",
+        "main": "dist/index.js",
+        "cmds": []
+      }
+    ]
+  },
+  "scripts": {
+    "dev": "bun build.ts dev",
+    "build": "bun build.ts"
+  },
+  "dependencies": {
+    "@kksh/api": "^0.1.3"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "./dist",
+    ".gitignore"
+  ],
+  "packageManager": "pnpm@9.10.0+sha512.73a29afa36a0d092ece5271de5177ecbf8318d454ecd701343131b8ebc0c1a91c487da46ab77c8e596d6acf1461e3594ced4becedf8921b074fbd8653ed7051c"
+}
