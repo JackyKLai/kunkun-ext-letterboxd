@@ -59,7 +59,7 @@ class LetterboxdCmd extends TemplateUiCommand {
 	async onFormSubmit(value: Record<string, any>): Promise<void> {
 		await kv.set(USERNAME_KEY, value['clear-username'] ? '' : value.username)
 		this.currentLetterboxdUsername = value.username
-		toast.success("Letterboxd username " + value['clear-username'] ? 'removed.' : `set to: ${value.username}`)
+		toast.success(`Letterboxd username ${value['clear-username'] ? 'removed' : 'set to ' + value.username}.`)
 		this.load()
 	}
 	async load() {
