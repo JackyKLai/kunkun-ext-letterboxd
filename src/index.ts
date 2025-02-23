@@ -53,17 +53,21 @@ async function getFinalURL(initialURL: string) {
 }
 
 class LetterboxdCmd extends TemplateUiCommand {
-	highlightedItem: string = ""
 	highlightedMovieId: string = ""
-	currentLetterboxdUsername: string = ""
+
 	async onFormSubmit(value: Record<string, any>): Promise<void> {
-		await kv.set(USERNAME_KEY, value['clear-username'] ? '' : value.username)
-		this.currentLetterboxdUsername = value.username
-		toast.success(`Letterboxd username ${value['clear-username'] ? 'removed' : 'set to ' + value.username}.`)
-		this.load()
+		if (value.username) {
+			await kv.set(USERNAME_KEY, value['clear-username'] ? '' : value.username)
+			toast.success(`Letterboxd username set to ${value.username}.`)
+		}
+		if (value['clear-username']) {
+			await kv.delete(USERNAME_KEY)
+			toast.success(`Letterboxd username removed.`)
+		}
+		ui.goBack()
 	}
+
 	async load() {
-		this.currentLetterboxdUsername = await kv.get(USERNAME_KEY) ?? '';
 		await ui.setSearchBarPlaceholder("Search for a movie...");
 		await ui.render(
 			new List.List({
@@ -92,14 +96,18 @@ class LetterboxdCmd extends TemplateUiCommand {
 	}
 
 	async onEnterPressedOnSearchBar(): Promise<void> {
+		if (!this.searchTerm) {
+			return
+		}
 		const url = `https://tmdb-kunkun.jackyklai.workers.dev/?search=${encodeURIComponent(this.searchTerm)}`;
 		const searchData = await (await fetch(url)).json();
 		let actions = convertActions(generalActions)
-		if (this.currentLetterboxdUsername) {
+		if (await kv.get(USERNAME_KEY)) {
 			actions = actions.concat(convertActions(friendsActions))
 			actions = actions.concat(convertActions(userActions))
 		}
 		actions = actions.concat(convertActions(specialActions))
+		ui.render(new List.List({}))
 		ui.render(
 			new List.List({
 				filter: 'none',
@@ -126,18 +134,18 @@ class LetterboxdCmd extends TemplateUiCommand {
 					})
 				})
 			})
-		)		
+		)
 		ui.setSearchTerm('')
 		return Promise.resolve()
 	}
 
 	onHighlightedListItemChanged(value: string): Promise<void> {
-		this.highlightedItem = value
 		this.highlightedMovieId = value == 'search' ? '' : JSON.parse(value).id
 		return Promise.resolve()
 	}
 
 	async onActionSelected(value: string): Promise<void> {
+		let letterboxdUsername = await kv.get(USERNAME_KEY)
 		if (actionsContainsValue(generalActions, value)) {
 			getFinalURL(`${LETTERBOXD_TMDB_URL}/${this.highlightedMovieId}`)
 			.then((url) => {
@@ -148,14 +156,14 @@ class LetterboxdCmd extends TemplateUiCommand {
 			.then((url) => {
 				const base_url = url.split('/film/')[0]
 				const movie_uri = url.split('/film/')[1]
-				open.url(`${base_url}/${this.currentLetterboxdUsername}/friends/film/${movie_uri}/${value}`)
+				open.url(`${base_url}/${letterboxdUsername}/friends/film/${movie_uri}/${value}`)
 			})
 		} else if (actionsContainsValue(userActions, value)) {
 			getFinalURL(`${LETTERBOXD_TMDB_URL}/${this.highlightedMovieId}`)
 			.then((url) => {
 				const base_url = url.split('/film/')[0]
 				const movie_uri = url.split('/film/')[1]
-				open.url(`${base_url}/${this.currentLetterboxdUsername}/film/${movie_uri}/${value}`)
+				open.url(`${base_url}/${letterboxdUsername}/film/${movie_uri}/${value}`)
 			})
 		} else {
 			if (value === 'settings') {
@@ -168,7 +176,7 @@ class LetterboxdCmd extends TemplateUiCommand {
 						placeholder: await kv.get(USERNAME_KEY) ?? 'Enter your Letterboxd username'
 					})
 				]
-				if (this.currentLetterboxdUsername) {
+				if (letterboxdUsername) {
 					formFields.push(
 						new Form.BooleanField({
 							key: 'clear-username',
@@ -191,7 +199,8 @@ class LetterboxdCmd extends TemplateUiCommand {
 	}
 
 	onListItemSelected(value: string): Promise<void> {
-		if (value !== 'search') {
+		if (value !== 'search' && this.searchTerm === '') {
+			this.highlightedMovieId = JSON.parse(value).id
 			open.url(`${LETTERBOXD_TMDB_URL}/${this.highlightedMovieId}`)
 		}
 		return Promise.resolve()
