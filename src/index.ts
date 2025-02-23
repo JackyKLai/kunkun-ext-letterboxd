@@ -5,7 +5,7 @@ import {
 	IconEnum,
 	List,
 	Form,
-	db,
+	kv,
 	open,
 	fetch,
 	toast,
@@ -22,7 +22,7 @@ import {
 
 const LETTERBOXD_URL = "https://letterboxd.com"
 const LETTERBOXD_TMDB_URL = `${LETTERBOXD_URL}/tmdb`
-const DB_SEARCH_TEXT = 'letterboxdUser'
+const USERNAME_KEY = 'letterboxdUser'
 
 function convertActions(actions: any) {
 	return actions.map((action: any) => {
@@ -52,48 +52,18 @@ async function getFinalURL(initialURL: string) {
     }
 }
 
-async function setLetterboxdUsername(username: string) {
-	const existingUsername = await db.search({ searchText: DB_SEARCH_TEXT });
-	if (!username) {
-		if (existingUsername.length > 0) {
-			await db.delete(existingUsername[0].dataId);
-		}
-	} else if (existingUsername.length > 0) {
-		await db.update({
-			dataId: existingUsername[0].dataId,
-			data: JSON.stringify({ letterboxdUser: username }),
-		});
-	} else {
-		await db.add({
-			data: JSON.stringify({ letterboxdUser: username }),
-			dataType: 'preference',
-			searchText: DB_SEARCH_TEXT,
-		});
-	}
-}
-
-async function getLetterboxdUsername() {
-	const existingUsername = await db.search({ searchText: DB_SEARCH_TEXT, fields: ['data', 'search_text'] });
-	if (existingUsername.length > 0) {
-		if (existingUsername[0].data) {
-			return JSON.parse(existingUsername[0].data).letterboxdUser;
-		}
-	}
-	return null;
-}
-
 class LetterboxdCmd extends TemplateUiCommand {
 	highlightedItem: string = ""
 	highlightedMovieId: string = ""
 	currentLetterboxdUsername: string = ""
 	async onFormSubmit(value: Record<string, any>): Promise<void> {
-		await setLetterboxdUsername(value['clear-username'] ? '' : value.username)
+		await kv.set(USERNAME_KEY, value['clear-username'] ? '' : value.username)
 		this.currentLetterboxdUsername = value.username
 		toast.success("Letterboxd username " + value['clear-username'] ? 'removed.' : `set to: ${value.username}`)
 		this.load()
 	}
 	async load() {
-		this.currentLetterboxdUsername = await getLetterboxdUsername();
+		this.currentLetterboxdUsername = await kv.get(USERNAME_KEY) ?? '';
 		await ui.setSearchBarPlaceholder("Search for a movie...");
 		await ui.render(
 			new List.List({
@@ -195,7 +165,7 @@ class LetterboxdCmd extends TemplateUiCommand {
 						label: 'Letterboxd Username',
 						description: 'Providing your Letterboxd username will enable additional actions like viewing your friends\' reviews and lists.',
 						optional: true,
-						placeholder: await getLetterboxdUsername() ?? 'Enter your Letterboxd username'
+						placeholder: await kv.get(USERNAME_KEY) ?? 'Enter your Letterboxd username'
 					})
 				]
 				if (this.currentLetterboxdUsername) {
